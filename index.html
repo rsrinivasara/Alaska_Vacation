@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alaska Family Adventure · Aug 6–16, 2026</title>
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Leaflet CSS from cdnjs (allowed in claude.ai artifact sandbox) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+
+<style>
+  :root {
+    --navy:     #1A2744;
+    --teal:     #0F6E56;
+    --teal-l:   #E1F5EE;
+    --amber:    #BA7517;
+    --amber-l:  #FAEEDA;
+    --purple:   #534AB7;
+    --purple-l: #EEEDFE;
+    --blue:     #185FA5;
+    --blue-l:   #E6F1FB;
+    --coral:    #993C1D;
+    --coral-l:  #FAECE7;
+    --gray:     #F5F3EE;
+    --gray-m:   #D3D1C7;
+    --gray-t:   #7A7870;
+    --white:    #FFFEFB;
+    --ink:      #1C1B18;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--navy); color: var(--ink); min-height: 100vh; }
+
+  /* HERO */
+  .hero { background: var(--navy); color: white; padding: 64px 40px 56px; position: relative; overflow: hidden; }
+  .hero::before {
+    content:''; position:absolute; inset:0; pointer-events:none;
+    background: radial-gradient(ellipse 80% 60% at 70% 50%, rgba(15,110,86,.18) 0%, transparent 70%),
+                radial-gradient(ellipse 50% 80% at 10% 80%, rgba(83,74,183,.12) 0%, transparent 60%);
+  }
+  .hero-inner { max-width:960px; margin:0 auto; position:relative; z-index:1; }
+  .hero-label { font-family:'DM Mono',monospace; font-size:11px; letter-spacing:.2em; color:rgba(255,255,255,.45); text-transform:uppercase; margin-bottom:18px; }
+  .hero h1 { font-family:'Playfair Display',serif; font-size:clamp(38px,6vw,68px); font-weight:700; line-height:1.05; margin-bottom:8px; }
+  .hero h1 em { font-style:italic; color:rgba(255,255,255,.6); }
+  .hero-sub { font-size:16px; font-weight:300; color:rgba(255,255,255,.55); margin-top:14px; }
+  .hero-meta { display:flex; flex-wrap:wrap; gap:10px; margin-top:28px; }
+  .hero-pill { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); border-radius:100px; padding:6px 16px; font-size:13px; color:rgba(255,255,255,.75); }
+  .hero-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; margin-top:44px; background:rgba(255,255,255,.08); border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,.08); }
+  .stat { background:rgba(255,255,255,.04); padding:20px 24px; text-align:center; }
+  .stat-num { font-family:'Playfair Display',serif; font-size:36px; font-weight:700; color:white; line-height:1; }
+  .stat-label { font-size:11px; color:rgba(255,255,255,.4); text-transform:uppercase; letter-spacing:.12em; margin-top:6px; }
+
+  /* MAIN */
+  .main { background:var(--white); border-radius:20px 20px 0 0; }
+  .container { max-width:960px; margin:0 auto; padding:0 32px; }
+  .section { padding:52px 0 16px; }
+  .section-title { font-family:'Playfair Display',serif; font-size:28px; font-weight:700; color:var(--navy); margin-bottom:6px; }
+  .section-sub { font-size:13px; color:var(--gray-t); font-weight:300; margin-bottom:28px; }
+
+  /* MAP */
+  #map { width:100%; height:480px; border-radius:14px; border:1px solid var(--gray-m); margin-bottom:12px; background:#e8e0d8; }
+  .map-note { font-size:12px; color:var(--gray-t); margin-bottom:8px; font-style:italic; }
+  .map-legend { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; margin-bottom:32px; }
+  .legend-pill { display:flex; align-items:center; gap:6px; background:var(--gray); border-radius:100px; padding:5px 12px 5px 8px; font-size:12px; color:var(--gray-t); }
+  .legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+  /* Leaflet popup overrides */
+  .leaflet-popup-content-wrapper { border-radius:10px !important; font-family:'DM Sans',sans-serif !important; box-shadow:0 4px 20px rgba(0,0,0,.15) !important; padding:0 !important; }
+  .leaflet-popup-content { margin:0 !important; }
+  .popup-inner { padding:12px 16px; }
+  .popup-day { font-family:'DM Mono',monospace; font-size:10px; color:var(--gray-t); text-transform:uppercase; letter-spacing:.1em; margin-bottom:3px; }
+  .popup-title { font-weight:600; color:var(--navy); margin-bottom:5px; font-size:14px; }
+  .popup-desc { font-size:12.5px; color:#666; font-weight:300; line-height:1.5; }
+
+  /* STAYS */
+  .stays-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:16px; }
+  .stay-card { border-radius:12px; padding:18px 16px; border:1px solid var(--gray-m); }
+  .stay-nights { font-family:'DM Mono',monospace; font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:.08em; margin-bottom:8px; }
+  .stay-town { font-size:15px; font-weight:500; color:var(--navy); line-height:1.3; }
+  .stay-dates { font-size:12px; color:var(--gray-t); margin-top:4px; }
+
+  /* BOOK BOX */
+  .book-box { background:var(--coral-l); border:1px solid #F5C4B3; border-left:4px solid var(--coral); border-radius:0 10px 10px 0; padding:18px 22px; margin:24px 0 48px; }
+  .book-box h4 { font-size:13px; font-weight:500; color:var(--coral); text-transform:uppercase; letter-spacing:.1em; margin-bottom:10px; }
+  .book-box ul { list-style:none; }
+  .book-box li { font-size:13.5px; color:#5A2A14; padding:4px 0 4px 16px; position:relative; line-height:1.5; }
+  .book-box li::before { content:'→'; position:absolute; left:0; color:var(--coral); font-size:11px; top:5px; }
+
+  /* DAY CARDS */
+  .days-list { display:flex; flex-direction:column; gap:16px; margin-bottom:52px; }
+  .day-card { border-radius:14px; border:1px solid var(--gray-m); overflow:hidden; }
+  .day-header { display:flex; align-items:stretch; cursor:pointer; user-select:none; }
+  .day-accent { width:5px; flex-shrink:0; }
+  .day-hc { flex:1; padding:18px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .day-date { font-family:'DM Mono',monospace; font-size:10.5px; font-weight:500; text-transform:uppercase; letter-spacing:.12em; margin-bottom:4px; }
+  .day-title-text { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:var(--navy); line-height:1.2; }
+  .day-base { font-size:12px; color:var(--gray-t); margin-top:4px; }
+  .day-chev { font-size:18px; color:var(--gray-m); transition:transform .25s ease; flex-shrink:0; }
+  .day-card.open .day-chev { transform:rotate(180deg); }
+  .day-body { display:none; padding:0 20px 20px 25px; border-top:1px solid var(--gray-m); }
+  .day-card.open .day-body { display:block; }
+  .stops-list { margin-top:16px; }
+  .stop-item { display:grid; grid-template-columns:90px 1fr; gap:12px; padding:12px 0; border-bottom:1px solid var(--gray-m); }
+  .stop-item:last-child { border-bottom:none; }
+  .stop-time { font-family:'DM Mono',monospace; font-size:10.5px; color:var(--gray-t); padding-top:3px; line-height:1.4; }
+  .stop-name { font-size:14px; font-weight:500; color:var(--navy); margin-bottom:3px; }
+  .stop-desc { font-size:13px; color:var(--gray-t); line-height:1.55; font-weight:300; }
+  .tip-row { margin-top:14px; background:var(--amber-l); border-radius:8px; padding:12px 16px; font-size:13px; color:#7A4A0A; line-height:1.55; font-weight:300; }
+  .tip-row strong { font-weight:500; color:var(--amber); }
+
+  /* TABLES */
+  .info-table { width:100%; border-collapse:collapse; margin-bottom:40px; font-size:13.5px; }
+  .info-table tr { border-bottom:1px solid var(--gray-m); }
+  .info-table tr:last-child { border-bottom:none; }
+  .info-table td { padding:12px 10px; vertical-align:top; line-height:1.5; }
+  .info-table td:first-child { font-weight:500; color:var(--navy); width:160px; white-space:nowrap; }
+  .info-table td:last-child { color:var(--gray-t); font-weight:300; }
+  .info-table tr:nth-child(even) td { background:var(--gray); }
+
+  /* PACKING */
+  .packing-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px; margin-bottom:48px; }
+  .pack-item { background:var(--gray); border-radius:10px; padding:16px; display:flex; gap:12px; align-items:flex-start; }
+  .pack-icon { font-size:20px; flex-shrink:0; line-height:1; margin-top:1px; }
+  .pack-title { font-size:13.5px; font-weight:500; color:var(--navy); margin-bottom:3px; }
+  .pack-desc { font-size:12.5px; color:var(--gray-t); font-weight:300; line-height:1.5; }
+
+  /* WEATHER */
+  .weather-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin-bottom:52px; }
+  .wx-card { background:var(--gray); border-radius:12px; padding:20px 18px; border:1px solid var(--gray-m); }
+  .wx-loc { font-size:14px; font-weight:500; color:var(--navy); margin-bottom:10px; }
+  .wx-temps { display:flex; gap:16px; margin-bottom:8px; }
+  .wx-temp { text-align:center; }
+  .wx-val { font-family:'Playfair Display',serif; font-size:24px; font-weight:700; line-height:1; }
+  .wx-lbl { font-size:10px; color:var(--gray-t); text-transform:uppercase; letter-spacing:.1em; margin-top:2px; }
+  .wx-note { font-size:12px; color:var(--gray-t); font-weight:300; line-height:1.5; }
+
+  /* FOOTER */
+  .footer { background:var(--navy); color:rgba(255,255,255,.35); text-align:center; padding:32px 20px; font-size:12px; letter-spacing:.04em; }
+  .footer strong { color:rgba(255,255,255,.6); }
+
+  @media (max-width:640px) {
+    .hero { padding:40px 20px 36px; }
+    .hero-stats { grid-template-columns:repeat(2,1fr); }
+    .container { padding:0 18px; }
+    .stop-item { grid-template-columns:70px 1fr; }
+    #map { height:320px; }
+  }
+  @media print {
+    .day-body { display:block !important; }
+    .day-chev { display:none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <p class="hero-label">Family Trip Itinerary · August 2026</p>
+    <h1>Alaska<br><em>Family Adventure</em></h1>
+    <p class="hero-sub">August 6 – 16, 2026 &nbsp;·&nbsp; New York → Anchorage → Denali → Seward → Girdwood</p>
+    <div class="hero-meta">
+      <span class="hero-pill">✈ JFK / EWR → ANC</span>
+      <span class="hero-pill">👨‍👩‍👧‍👦 Two families</span>
+      <span class="hero-pill">🧒 Ages 5, 8, 9 &amp; 12</span>
+      <span class="hero-pill">🏔 Mid-range budget</span>
+    </div>
+    <div class="hero-stats">
+      <div class="stat"><div class="stat-num">10</div><div class="stat-label">Nights</div></div>
+      <div class="stat"><div class="stat-num">4</div><div class="stat-label">Regions</div></div>
+      <div class="stat"><div class="stat-num">2</div><div class="stat-label">Nat'l Parks</div></div>
+      <div class="stat"><div class="stat-num">3</div><div class="stat-label">Glaciers</div></div>
+    </div>
+  </div>
+</header>
+
+<div class="main"><div class="container">
+
+  <div class="section">
+    <h2 class="section-title">Trip Route Map</h2>
+    <p class="section-sub">All stops across your 10-night Alaska loop — click any pin for details</p>
+    <div id="map"></div>
+    <div class="map-legend">
+      <div class="legend-pill"><div class="legend-dot" style="background:#0F6E56"></div>Anchorage area (Aug 6–9)</div>
+      <div class="legend-pill"><div class="legend-dot" style="background:#534AB7"></div>Mat-Su Valley (Aug 10)</div>
+      <div class="legend-pill"><div class="legend-dot" style="background:#BA7517"></div>Denali (Aug 11–12)</div>
+      <div class="legend-pill"><div class="legend-dot" style="background:#185FA5"></div>Seward / Kenai (Aug 13–14)</div>
+      <div class="legend-pill"><div class="legend-dot" style="background:#993C1D"></div>Girdwood (Aug 15)</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2 class="section-title">Where to Stay</h2>
+    <p class="section-sub">4 base camps · 4 hotel changes across 10 nights</p>
+    <div class="stays-grid">
+      <div class="stay-card" style="background:var(--teal-l);border-color:#9FE1CB"><div class="stay-nights" style="color:var(--teal)">4 Nights</div><div class="stay-town">Anchorage</div><div class="stay-dates">Aug 6–9</div></div>
+      <div class="stay-card" style="background:var(--purple-l);border-color:#AFA9EC"><div class="stay-nights" style="color:var(--purple)">1 Night</div><div class="stay-town">Palmer / Mat-Su Valley</div><div class="stay-dates">Aug 10</div></div>
+      <div class="stay-card" style="background:var(--amber-l);border-color:#FAC775"><div class="stay-nights" style="color:var(--amber)">2 Nights</div><div class="stay-town">Denali Village</div><div class="stay-dates">Aug 11–12</div></div>
+      <div class="stay-card" style="background:var(--blue-l);border-color:#85B7EB"><div class="stay-nights" style="color:var(--blue)">2 Nights</div><div class="stay-town">Seward</div><div class="stay-dates">Aug 13–14</div></div>
+      <div class="stay-card" style="background:var(--coral-l);border-color:#F0997B"><div class="stay-nights" style="color:var(--coral)">Fly Out</div><div class="stay-town">Girdwood → Anchorage</div><div class="stay-dates">Aug 15–16</div></div>
+    </div>
+    <div class="book-box">
+      <h4>⚠ Book These Now — They Sell Out!</h4>
+      <ul>
+        <li>Portage Glacier boat tour — fills weeks ahead in August</li>
+        <li>Denali Tundra Wildlife Tour bus — book at recreation.gov months in advance; sells out completely</li>
+        <li>Matanuska Glacier guided walk — book at least 1 week ahead</li>
+        <li>Kenai Fjords full-day boat tour — Major Marine Tours or Kenai Fjords Tours</li>
+        <li>2× large SUVs or minivans for the full 10 days</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2 class="section-title">Day-by-Day Itinerary</h2>
+    <p class="section-sub">Click any day to expand · All times are approximate</p>
+    <div class="days-list" id="days-list"></div>
+  </div>
+
+  <div class="section">
+    <h2 class="section-title">Flight Information</h2>
+    <p class="section-sub">New York → Anchorage → New York</p>
+    <table class="info-table">
+      <tr><td>Route</td><td>New York (JFK / EWR) → Anchorage (ANC) → New York</td></tr>
+      <tr><td>Dates</td><td>Depart Aug 6 · Return Aug 16</td></tr>
+      <tr><td>Nonstop options</td><td>Alaska Airlines (JFK → ANC) · United Airlines (EWR → ANC)</td></tr>
+      <tr><td>Flight time</td><td>~7h 44m nonstop · ~11 hrs with 1 stop via Seattle (SEA)</td></tr>
+      <tr><td>Est. round-trip</td><td>~$560–$650 per person (August 2026 pricing)</td></tr>
+      <tr><td>Best tip</td><td>Book directly with Alaska Airlines or United. Set Google Flights price alerts now for Aug 6 departures.</td></tr>
+      <tr><td>Return flight</td><td>Book no earlier than noon on Aug 16 — allow 45 min drive to ANC + 2 hrs at the airport.</td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2 class="section-title">August Weather</h2>
+    <p class="section-sub">Peak summer · Long 17-hr days · Pack layers for everyone</p>
+    <div class="weather-grid">
+      <div class="wx-card"><div class="wx-loc">Anchorage</div><div class="wx-temps"><div class="wx-temp"><div class="wx-val" style="color:var(--coral)">65°F</div><div class="wx-lbl">High</div></div><div class="wx-temp"><div class="wx-val" style="color:var(--blue)">52°F</div><div class="wx-lbl">Low</div></div></div><div class="wx-note">Mild and mostly sunny. 17+ hours of daylight in early August. Some rain showers possible.</div></div>
+      <div class="wx-card"><div class="wx-loc">Denali area</div><div class="wx-temps"><div class="wx-temp"><div class="wx-val" style="color:var(--coral)">55°F</div><div class="wx-lbl">High</div></div><div class="wx-temp"><div class="wx-val" style="color:var(--blue)">40°F</div><div class="wx-lbl">Low</div></div></div><div class="wx-note">Cooler and windier. Pack a fleece and waterproof shell for every person.</div></div>
+      <div class="wx-card"><div class="wx-loc">Seward / Kenai</div><div class="wx-temps"><div class="wx-temp"><div class="wx-val" style="color:var(--coral)">58°F</div><div class="wx-lbl">High</div></div><div class="wx-temp"><div class="wx-val" style="color:var(--blue)">48°F</div><div class="wx-lbl">Low</div></div></div><div class="wx-note">Rainier than Anchorage. Waterproof jackets essential, especially on the boat tour.</div></div>
+      <div class="wx-card"><div class="wx-loc">Mat-Su / Palmer</div><div class="wx-temps"><div class="wx-temp"><div class="wx-val" style="color:var(--coral)">63°F</div><div class="wx-lbl">High</div></div><div class="wx-temp"><div class="wx-val" style="color:var(--blue)">48°F</div><div class="wx-lbl">Low</div></div></div><div class="wx-note">Similar to Anchorage. The glacier itself is 10–15°F colder — dress in layers.</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2 class="section-title">Packing Essentials</h2>
+    <p class="section-sub">For Alaska in August with kids</p>
+    <div class="packing-grid">
+      <div class="pack-item"><div class="pack-icon">🧥</div><div><div class="pack-title">Layers for everyone</div><div class="pack-desc">Temps range 40–65°F. Fleece + waterproof shell per person. Glaciers and the Denali bus are much colder.</div></div></div>
+      <div class="pack-item"><div class="pack-icon">🌧️</div><div><div class="pack-title">Rain gear</div><div class="pack-desc">Light waterproof jacket for every person. August showers especially on the Kenai Peninsula.</div></div></div>
+      <div class="pack-item"><div class="pack-icon">🔭</div><div><div class="pack-title">Binoculars</div><div class="pack-desc">Essential for Denali bus and Kenai Fjords boat. One pair per family minimum.</div></div></div>
+      <div class="pack-item"><div class="pack-icon">💊</div><div><div class="pack-title">Dramamine / Sea-Bands</div><div class="pack-desc">For the Kenai Fjords boat (choppy outer waters) and the Denali park bus (unpaved road).</div></div></div>
+      <div class="pack-item"><div class="pack-icon">👟</div><div><div class="pack-title">Waterproof hiking shoes</div><div class="pack-desc">For all adults and kids. Mandatory for Matanuska Glacier — closed-toe waterproof required.</div></div></div>
+      <div class="pack-item"><div class="pack-icon">🐻</div><div><div class="pack-title">Bear spray</div><div class="pack-desc">Rentable at Denali. Worth having for trail hiking. Rangers will show you how to use it.</div></div></div>
+      <div class="pack-item"><div class="pack-icon">🧺</div><div><div class="pack-title">Large cooler + snacks</div><div class="pack-desc">Stock before Denali — food is limited and expensive in the park. Pack lunches for the bus tour.</div></div></div>
+      <div class="pack-item"><div class="pack-icon">📷</div><div><div class="pack-title">Camera + battery bank</div><div class="pack-desc">You will take more photos than you expect. A portable battery bank is essential for all-day outings.</div></div></div>
+      <div class="pack-item"><div class="pack-icon">🦟</div><div><div class="pack-title">Bug spray</div><div class="pack-desc">Especially for Exit Glacier and forested trails. Alaska mosquitoes in August are legendary.</div></div></div>
+    </div>
+  </div>
+
+</div></div>
+
+<footer class="footer">
+  <strong>Alaska Family Adventure · August 6–16, 2026</strong><br>
+  Two families · 4 kids · New York to Anchorage and back
+</footer>
+
+<!-- Leaflet JS loaded SYNCHRONOUSLY before any map code runs -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// ── DAY DATA ─────────────────────────────────────────────────────────────────
+const DAYS = [
+  { date:"Aug 6 — Wednesday", title:"Arrival in Anchorage", base:"Stay: Anchorage (night 1 of 4)", color:"#0F6E56", light:"#E1F5EE",
+    stops:[
+      {t:"Afternoon",n:"Land at Ted Stevens International (ANC)",d:"Pick up 2 large SUVs — cargo space for 10 days with two families. Drive to accommodation and get settled."},
+      {t:"Evening",n:"Explore Downtown Anchorage",d:"Walk Ship Creek waterfront, browse 4th Ave shops, stretch legs after the long flight from New York."},
+      {t:"Dinner",n:"Glacier Brewhouse",d:"Classic Anchorage restaurant with wood-fired food and local craft beers. Perfect big-group first-night dinner."},
+    ], tip:"Book 2 large SUVs or minivans for the full trip. An Airbnb or VRBO with shared common space works much better than two separate hotel rooms for two families." },
+  { date:"Aug 7 — Thursday", title:"Flattop Hike + Wildlife Center", base:"Stay: Anchorage (night 2 of 4)", color:"#0F6E56", light:"#E1F5EE",
+    stops:[
+      {t:"7:30 AM",n:"Breakfast — Heidi's Family Restaurant",d:"Legendary Anchorage breakfast spot. Famous for fluffy pancakes and generous portions. Opens at 6am."},
+      {t:"9:00 AM",n:"Glen Alps / Flattop Mountain Trailhead ⭐ 4.8",d:"Lower Blueberry Loop for the 5-year-old; older kids summit Flattop for panoramic views of Anchorage and Cook Inlet. Paid parking required."},
+      {t:"12:30 PM",n:"Alaska Wildlife Conservation Center ⭐ 4.7",d:"45 min south on Seward Hwy. Moose, grizzly bears, bison, lynx in large natural enclosures. Lunch at the on-site café."},
+      {t:"Evening",n:"Return to Anchorage",d:"Easy evening — kids will be pleasantly exhausted. Grab takeout or cook in."},
+    ], tip:"Watch for Dall sheep and beluga whales along Turnagain Arm on the Seward Highway — one of the most scenic coastal drives in America." },
+  { date:"Aug 8 — Friday", title:"Portage Glacier + Girdwood", base:"Stay: Anchorage (night 3 of 4)", color:"#0F6E56", light:"#E1F5EE",
+    stops:[
+      {t:"9:00 AM",n:"Drive south — stop at Beluga Point",d:"Scenic 1-hr drive. Beluga Point lookout is a great spot to see beluga whales in Turnagain Arm."},
+      {t:"10:30 AM",n:"Portage Glacier Boat Tour ⭐ 4.7",d:"Pre-booked narrated cruise right up to the glacier face. Absolutely spectacular — book well ahead!"},
+      {t:"1:00 PM",n:"Lunch — Portage Glacier Café",d:"Convenient on-site café near the Begich Boggs Visitor Center."},
+      {t:"2:30 PM",n:"Alyeska Resort, Girdwood ⭐ 4.4",d:"Ride the aerial tram to 2,300 ft for sweeping Chugach Mountain views."},
+      {t:"Evening",n:"Seven Glaciers Restaurant or Anchorage",d:"Seven Glaciers at Alyeska is a splurge-worthy dinner atop the tram with jaw-dropping views."},
+    ], tip:"Pre-book the Portage Glacier boat tour 1–2 weeks ahead in August — it fills fast, especially with family groups." },
+  { date:"Aug 9 — Saturday", title:"Alaska Native Heritage + Prep Day", base:"Stay: Anchorage (night 4 of 4)", color:"#0F6E56", light:"#E1F5EE",
+    stops:[
+      {t:"Morning",n:"Anchorage Market & Festival",d:"Saturday morning outdoor market downtown. Local food, crafts, and produce. Great casual start."},
+      {t:"Afternoon",n:"Alaska Native Heritage Center ⭐ 4.6",d:"Traditional village houses, live storytelling, Eskimo games demonstrations. Great for all ages. Confirm hours ahead."},
+      {t:"Evening",n:"Pack + prep for Glenn Highway tomorrow",d:"Load both cars the night before. Stock a cooler with snacks and supplies."},
+    ], tip:"Check Alaska Native Heritage Center hours before going — they're sometimes closed on Saturdays. Have a backup plan just in case." },
+  { date:"Aug 10 — Sunday", title:"Matanuska Glacier + Hatcher Pass", base:"Stay: Palmer / Mat-Su Valley (1 night)", color:"#534AB7", light:"#EEEDFE",
+    stops:[
+      {t:"8:00 AM",n:"Depart Anchorage — Glenn Highway NE",d:"One of Alaska's most dramatic drives. Watch for moose and Dall sheep. About 2.5 hrs to the glacier."},
+      {t:"10:00 AM",n:"Matanuska Glacier Guided Walk ⭐ 4.6",d:"Alaska's largest roadside glacier. Walk into crevasses and blue ice caves. Crampons and helmets provided in all sizes."},
+      {t:"1:00 PM",n:"Lunch — Long Rifle Lodge",d:"Iconic roadside stop right at the glacier entrance with spectacular mountain views."},
+      {t:"3:00 PM",n:"Independence Mine / Hatcher Pass ⭐ 4.8",d:"Alpine hiking above tree line. August wildflowers peak. All 4 kids can handle the trails. Historic gold mine buildings."},
+      {t:"Evening",n:"Stay in Palmer / Mat-Su Valley",d:"30 min from glacier, 4 hrs from Denali. Perfect positioning for tomorrow's northward drive."},
+    ], tip:"Book Matanuska Glacier guided tours at least 1 week ahead. The 2-hour tour is perfect for kids — all gear provided in all sizes." },
+  { date:"Aug 11 — Monday", title:"Drive to Denali + Arrival", base:"Stay: Denali Village (night 1 of 2)", color:"#BA7517", light:"#FAEEDA",
+    stops:[
+      {t:"7:30 AM",n:"Depart Palmer → Denali (3.5 hours)",d:"Parks Hwy north. Stop in Talkeetna for coffee and — if clear — a view of Denali's full 20,310-ft peak."},
+      {t:"11:30 AM",n:"Denali Visitor Center ⭐ 4.7",d:"Excellent wildlife and ecosystem exhibits. Great orientation for kids before exploring the park."},
+      {t:"1:30 PM",n:"Free Sled Dog Demonstration",d:"The park maintains a working kennel — live demos with actual sled dogs. A massive hit with every kid."},
+      {t:"3:00 PM",n:"Savage River Loop Hike",d:"2-mile accessible trail with great views and moose-spotting. Manageable even for the 5-year-old."},
+      {t:"Evening",n:"Dinner in Denali Village",d:"Stock up on snacks and packed lunches for tomorrow's all-day bus tour."},
+    ], tip:"Book Denali Tundra Wildlife Tour at recreation.gov months ahead — August is peak season and these sell out completely." },
+  { date:"Aug 12 — Tuesday", title:"Denali — Full Day Tundra Wildlife Tour", base:"Stay: Denali Village (night 2 of 2)", color:"#BA7517", light:"#FAEEDA",
+    stops:[
+      {t:"6:30 AM",n:"Board the Tundra Wildlife Tour Bus (pre-booked)",d:"No private vehicles past Mile 15. Bring layers, binoculars, snacks, and a packed lunch."},
+      {t:"All day",n:"Tundra Wildlife Tour — 7 to 8 hours ⭐ 4.7",d:"Grizzly bears, caribou, moose, Dall sheep, arctic foxes, eagles. If skies cooperate — the full 20,310-ft Denali summit."},
+      {t:"4:30 PM",n:"Return to entrance + rest",d:"Everyone will be wonderfully exhausted. Pack cars for tomorrow's Seward drive."},
+      {t:"Evening",n:"Final Denali dinner",d:"Let the kids vote on their best sighting — moose vs. grizzly is always the top debate."},
+    ], tip:"Pack Dramamine for the bus — unpaved and bumpy. Multiple layers essential: tundra can be 20°F cooler than the entrance." },
+  { date:"Aug 13 — Wednesday", title:"Long Drive Day → Seward", base:"Stay: Seward (night 1 of 2)", color:"#185FA5", light:"#E6F1FB",
+    stops:[
+      {t:"7:00 AM",n:"Depart Denali → Seward (6 hours total)",d:"Parks Hwy south through Anchorage, then the Seward Hwy to the coast. One of the world's great scenic drives."},
+      {t:"12:30 PM",n:"Lunch stop in Anchorage",d:"Spenard Roadhouse or Snow City Café. Refuel the cars and the crew."},
+      {t:"3:30 PM",n:"Arrive Seward — explore the harbor",d:"Stunning harbor town at the foot of the Kenai Mountains. Walk the waterfront and small boat harbor."},
+      {t:"Evening",n:"Dinner — Ray's Waterfront",d:"Classic Seward seafood right on the harbor. Halibut, salmon, Dungeness crab. Reserve ahead."},
+    ], tip:"Book your Kenai Fjords boat tour for Aug 14 before leaving home — Major Marine Tours and Kenai Fjords Tours run excellent full-day cruises." },
+  { date:"Aug 14 — Thursday", title:"Kenai Fjords Boat Tour + Exit Glacier", base:"Stay: Seward (night 2 of 2)", color:"#185FA5", light:"#E6F1FB",
+    stops:[
+      {t:"8:00 AM",n:"Full-Day Kenai Fjords Boat Tour ⭐ 4.9",d:"The crown jewel of the trip. Orcas, humpbacks, puffins, sea otters, harbor seals, and tidewater glaciers calving into the sea."},
+      {t:"5:00 PM",n:"Return to Seward Harbor",d:"Fresh king crab legs and halibut from dockside vendors — perfect after a day on the water."},
+      {t:"6:30 PM",n:"Exit Glacier Trailhead ⭐ 4.9 (optional)",d:"Easy flat trail to the glacier toe. Markers show decades of retreat — very moving for older kids and adults."},
+    ], tip:"Pack Dramamine or Sea-Bands for motion sickness — the outer Kenai waters can get choppy. The 5-year-old should be fine on calm days." },
+  { date:"Aug 15–16 — Fri/Sat", title:"Girdwood · Last Night · Fly Home", base:"Fly home from Anchorage (ANC) on Aug 16", color:"#993C1D", light:"#FAECE7",
+    stops:[
+      {t:"Aug 15 AM",n:"Drive Seward → Girdwood (2 hours)",d:"Last scenic drive up the Seward Hwy. Stop at the Portage Glacier overlook one final time."},
+      {t:"Midday",n:"Alyeska Tram + Seven Glaciers Lunch ⭐ 4.4",d:"Gondola to 2,300 ft — sweeping Chugach Mountain views. Seven Glaciers is the perfect splurge final lunch."},
+      {t:"Afternoon",n:"Girdwood Village + ice cream",d:"Kids run around. Soak in the last Alaskan afternoon together."},
+      {t:"Evening",n:"Final Dinner — Spenard Roadhouse, Anchorage",d:"Drive back 45 min. Celebrate 10 incredible days with great burgers and reindeer sausage."},
+      {t:"Aug 16",n:"Fly home from ANC ✈",d:"Return rental cars and head home with a lifetime of memories — and ~3,000 photos."},
+    ], tip:"Book Aug 16 flight no earlier than noon. Allow 45 min drive to ANC + 2 hours at the airport for a comfortable departure." },
+];
+
+// Render day cards
+const list = document.getElementById('days-list');
+DAYS.forEach((d, i) => {
+  const el = document.createElement('div');
+  el.className = 'day-card' + (i === 0 ? ' open' : '');
+  el.innerHTML = `
+    <div class="day-header" onclick="this.closest('.day-card').classList.toggle('open')">
+      <div class="day-accent" style="background:${d.color}"></div>
+      <div class="day-hc">
+        <div>
+          <div class="day-date" style="color:${d.color}">${d.date}</div>
+          <div class="day-title-text">${d.title}</div>
+          <div class="day-base">${d.base}</div>
+        </div>
+        <div class="day-chev">▾</div>
+      </div>
+    </div>
+    <div class="day-body">
+      <div class="stops-list">
+        ${d.stops.map(s => `
+          <div class="stop-item">
+            <div class="stop-time">${s.t}</div>
+            <div>
+              <div class="stop-name">${s.n}</div>
+              <div class="stop-desc">${s.d}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+      <div class="tip-row"><strong>Family tip:</strong> ${d.tip}</div>
+    </div>`;
+  list.appendChild(el);
+});
+
+// ── LEAFLET MAP ───────────────────────────────────────────────────────────────
+// L is guaranteed defined here because the <script src> above is synchronous
+
+const map = L.map('map', {
+  center: [61.5, -149.5],
+  zoom: 6,
+  scrollWheelZoom: false,
+  zoomControl: true,
+});
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  maxZoom: 18,
+}).addTo(map);
+
+// Dashed route polyline
+L.polyline([
+  [61.1743,-149.9961],[61.1030,-149.6840],[60.8212,-148.9792],
+  [60.9621,-149.0865],[60.7531,-148.7856],[61.1743,-149.9961],
+  [61.2328,-149.7172],[61.6558,-147.5811],[61.7909,-149.2820],
+  [63.7309,-148.9171],[61.1743,-149.9961],[60.1881,-149.6316],
+  [59.8487,-150.1879],[60.9621,-149.0865],[61.1743,-149.9961],
+], { color:'#1A2744', weight:2.5, opacity:0.55, dashArray:'8,6' }).addTo(map);
+
+// Pins
+[
+  { lat:61.1743,lng:-149.9961,color:'#0F6E56',day:'Day 1 & home base',  name:'✈ Anchorage (ANC)',           desc:'Fly in Aug 6 · Pick up 2 SUVs · Explore downtown & Glacier Brewhouse.' },
+  { lat:61.1030,lng:-149.6840,color:'#0F6E56',day:'Day 2',              name:'Flattop Mountain Trailhead',   desc:'Lower loop for the 5-yr-old, or summit for panoramic views. ⭐ 4.8' },
+  { lat:60.8212,lng:-148.9792,color:'#0F6E56',day:'Day 2',              name:'Alaska Wildlife Conserv. Ctr', desc:'Moose, grizzlies, bison & lynx in natural enclosures. ⭐ 4.7' },
+  { lat:60.9621,lng:-149.0865,color:'#993C1D',day:'Days 3 & 10',        name:'Alyeska Resort — Girdwood',    desc:'Aerial tram to 2,300 ft · Seven Glaciers restaurant. ⭐ 4.4' },
+  { lat:60.7531,lng:-148.7856,color:'#0F6E56',day:'Day 3',              name:'Portage Glacier',              desc:'Boat tour right up to the glacier face. Book in advance! ⭐ 4.7' },
+  { lat:61.2328,lng:-149.7172,color:'#0F6E56',day:'Day 4',              name:'Alaska Native Heritage Ctr',   desc:'Traditional villages, storytelling, Eskimo games. ⭐ 4.6' },
+  { lat:61.6558,lng:-147.5811,color:'#534AB7',day:'Day 5',              name:'Matanuska Glacier',            desc:"Walk on Alaska's largest roadside glacier. Crampons provided. ⭐ 4.6" },
+  { lat:61.7909,lng:-149.2820,color:'#534AB7',day:'Day 5',              name:'Hatcher Pass / Indep. Mine',   desc:'Alpine hiking above tree line. August wildflowers peak. ⭐ 4.8' },
+  { lat:63.7309,lng:-148.9171,color:'#BA7517',day:'Days 6–7',           name:'Denali National Park',         desc:'Sled dog demos · Tundra Wildlife Tour · Grizzlies & caribou. ⭐ 4.7' },
+  { lat:60.1881,lng:-149.6316,color:'#185FA5',day:'Day 9',              name:'Exit Glacier',                 desc:'Easy trail to the glacier toe. Decades of retreat marked along path. ⭐ 4.9' },
+  { lat:59.8487,lng:-150.1879,color:'#185FA5',day:'Day 9',              name:"Kenai Fjords Nat'l Park",      desc:'Full-day boat tour: orcas, humpbacks, puffins, calving glaciers. ⭐ 4.9' },
+].forEach(p => {
+  L.marker([p.lat, p.lng], {
+    icon: L.divIcon({
+      className: '',
+      html: `<div style="width:14px;height:14px;border-radius:50%;background:${p.color};border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.32);"></div>`,
+      iconSize:[14,14], iconAnchor:[7,7], popupAnchor:[1,-10],
+    })
+  }).addTo(map).bindPopup(`
+    <div class="popup-inner">
+      <div class="popup-day">${p.day}</div>
+      <div class="popup-title">${p.name}</div>
+      <div class="popup-desc">${p.desc}</div>
+    </div>`, { maxWidth:250 });
+});
+</script>
+</body>
+</html>
